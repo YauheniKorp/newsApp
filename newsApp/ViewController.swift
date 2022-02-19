@@ -16,6 +16,8 @@ class ViewController: UIViewController {
         return tableView
     }()
     
+    private let searchVC = UISearchController(searchResultsController: nil)
+    
     private var articles = [Article]()
     private var models = [NewsTableViewCellModel]()
     
@@ -26,7 +28,18 @@ class ViewController: UIViewController {
         view.addSubview(tableView)
         tableView.delegate = self
         tableView.dataSource = self
+        getTopStories()
+        configureSearchBar()
         
+        
+    }
+    
+    private func configureSearchBar() {
+        navigationItem.searchController = searchVC
+        searchVC.searchBar.delegate = self
+    }
+    
+    private func getTopStories() {
         ApiCaller.shared.getTopStories { result in
             switch result {
             case .success(let article):
@@ -42,7 +55,6 @@ class ViewController: UIViewController {
                 print(error)
             }
         }
-        
     }
     
     override func viewDidLayoutSubviews() {
@@ -81,4 +93,26 @@ extension ViewController: UITableViewDelegate, UITableViewDataSource {
         
     }
     
+}
+
+extension ViewController: UISearchBarDelegate {
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        guard let text = searchBar.text else {return}
+        
+        ApiCaller.shared.searchQuery(text) { result in
+            switch result {
+            case .success(let article):
+                self.articles = article
+                self.models = article.compactMap({ NewsTableViewCellModel(title: $0.title, subtitle: $0.description ?? "No description", imageUrl: URL(string: $0.urlToImage ?? ""))
+                    
+                })
+                DispatchQueue.main.async {
+                    self.tableView.reloadData()
+                    self.searchVC.dismiss(animated: true, completion: nil)
+                }
+            case .failure(let error):
+                print(error)
+            }
+        }
+    }
 }

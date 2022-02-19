@@ -13,9 +13,36 @@ final class ApiCaller {
     
     struct Constants {
         static let headliner = URL(string: "https://newsapi.org/v2/top-headlines?country=us&apiKey=04635be9b9e449d8bd824a22a59f2aa2")
+        static let searchUrl = "https://newsapi.org/v2/everything?sortBy=popularity&apiKey=04635be9b9e449d8bd824a22a59f2aa2&q="
     }
     
     private init() {
+        
+    }
+    
+    public func searchQuery(_ query: String, completion: @escaping (Result<[Article], Error>)-> Void) {
+        
+        guard !query.trimmingCharacters(in: .whitespaces).isEmpty else {return}
+        
+        let queryString = Constants.searchUrl + query
+        
+        guard let url = URL(string: queryString) else {return}
+        
+        let task = URLSession.shared.dataTask(with: url) { data, _, error in
+            guard error == nil, let data = data else {
+                return completion(.failure(error!))
+            }
+            
+            do {
+                let result = try JSONDecoder().decode(ApiResponse.self, from: data)
+                
+                completion(.success(result.articles))
+            } catch  {
+                completion(.failure(error))
+            }
+        }
+        
+        task.resume()
         
     }
     
